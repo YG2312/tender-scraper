@@ -2,7 +2,7 @@ name: Run Tender Scraper
 
 on:
   schedule:
-    - cron: "*/20 * * * *"   # runs every 10 minutes
+    - cron: "*/30 * * * *"   # runs every 10 minutes
   workflow_dispatch:         # allows manual run
 
 jobs:

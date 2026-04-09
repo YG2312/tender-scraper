@@ -2,6 +2,11 @@
 
 An automated Python-based scraper that extracts live tender data from multiple Indian government portals and syncs it directly to Google Sheets.
 
+
+<img width="1905" height="893" alt="image" src="https://github.com/user-attachments/assets/64a6fe82-2a49-4202-95eb-56da2be5c8fb" />
+
+
+
 ---
 
 ## 🔥 Features

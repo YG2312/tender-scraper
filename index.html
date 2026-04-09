@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TenderZ – Government Tender Scraper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,600;1,9..40,300&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+<style>
+/* ── RESET & VARIABLES ─────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --red:       #FA320A;
+  --red-dark:  #C4260A;
+  --red-glow:  rgba(250,50,10,.35);
+  --cream:     #FFF8F0;
+  --ink:       #1A0A00;
+  --ink-mid:   #3D2010;
+  --ink-soft:  #7A5540;
+  --border:    #EDD8C8;
+  --chip-bg:   #FFF0E6;
+  --green:     #22C55E;
+  --amber:     #F59E0B;
+  --surface:   #FFFCFA;
+  --shadow:    0 2px 24px rgba(26,10,0,.10);
+  --shadow-lg: 0 8px 48px rgba(26,10,0,.16);
+  --radius:    10px;
+  --font-head: 'Bebas Neue', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-body);
+  background: var(--cream);
+  color: var(--ink);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── GRAIN OVERLAY ─────────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0;
+  opacity: .6;
+}
+
+/* ── TOPBAR ────────────────────────────────────────────────── */
+.topbar {
+  background: var(--ink);
+  padding: 0 2rem;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 44px;
+  position: sticky; top: 0; z-index: 100;
+  border-bottom: 2px solid var(--red);
+}
+.topbar-left { display: flex; align-items: center; gap: .75rem; }
+.topbar-brand {
+  font-family: var(--font-head);
+  font-size: 1.6rem;
+  letter-spacing: .05em;
+  color: var(--red);
+  text-shadow: 0 0 20px var(--red-glow);
+  line-height: 1;
+}
+.demo-badge {
+  background: var(--red);
+  color: #fff;
+  font-size: .6rem;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 3px;
+  animation: pulse-badge 2s infinite;
+}
+@keyframes pulse-badge {
+  0%,100% { opacity:1; }
+  50%      { opacity:.6; }
+}
+.topbar-right {
+  font-size: .72rem;
+  color: var(--ink-soft);
+  letter-spacing: .04em;
+}
+.topbar-right span { color: var(--red); font-weight: 600; }
+
+/* ── HERO ──────────────────────────────────────────────────── */
+.hero {
+  background: var(--ink);
+  padding: 3.5rem 2rem 2.5rem;
+  position: relative;
+  overflow: hidden;
+}
+.hero::after {
+  content: 'TENDERZ';
+  position: absolute;
+  bottom: -1rem; right: -1rem;
+  font-family: var(--font-head);
+  font-size: 9rem;
+  color: rgba(255,255,255,.03);
+  pointer-events: none;
+  line-height: 1;
+  letter-spacing: -.02em;
+}
+.hero-inner { max-width: 900px; margin: 0 auto; position: relative; z-index: 1; }
+.hero-eyebrow {
+  font-size: .7rem;
+  font-weight: 600;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: .6rem;
+  display: flex; align-items: center; gap: .5rem;
+}
+.hero-eyebrow::before {
+  content:'';
+  display:inline-block;
+  width:24px; height:2px;
+  background:var(--red);
+  border-radius:1px;
+}
+.hero-title {
+  font-family: var(--font-head);
+  font-size: clamp(2.8rem, 6vw, 5rem);
+  line-height: 1;
+  color: var(--cream);
+  letter-spacing: .03em;
+  margin-bottom: .6rem;
+}
+.hero-title em {
+  color: var(--red);
+  font-style: normal;
+  text-shadow: 0 0 32px var(--red-glow);
+}
+.hero-sub {
+  font-size: .92rem;
+  color: rgba(255,248,240,.5);
+  font-weight: 300;
+  line-height: 1.6;
+  max-width: 540px;
+  margin-bottom: 2rem;
+}
+.hero-stats {
+  display: flex; gap: 2rem; flex-wrap: wrap;
+}
+.stat-card {
+  background: rgba(255,248,240,.05);
+  border: 1px solid rgba(255,248,240,.1);
+  border-radius: var(--radius);
+  padding: .75rem 1.25rem;
+  min-width: 110px;
+  animation: fadeSlideUp .6s ease both;
+}
+.stat-card:nth-child(2) { animation-delay:.1s; }
+.stat-card:nth-child(3) { animation-delay:.2s; }
+.stat-num {
+  font-family: var(--font-head);
+  font-size: 2rem;
+  color: var(--cream);
+  line-height: 1;
+}
+.stat-label {
+  font-size: .68rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: rgba(255,248,240,.4);
+  margin-top: 2px;
+}
+
+/* ── SEARCH BAR ────────────────────────────────────────────── */
+.search-bar-wrap {
+  background: var(--ink-mid);
+  padding: 1.25rem 2rem;
+  border-bottom: 1px solid rgba(255,248,240,.08);
+  position: sticky; top: 44px; z-index: 90;
+}
+.search-inner {
+  max-width: 900px; margin: 0 auto;
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+}
+.search-box {
+  flex: 1; min-width: 220px;
+  position: relative;
+}
+.search-box input {
+  width: 100%;
+  background: rgba(255,248,240,.07);
+  border: 1.5px solid rgba(255,248,240,.15);
+  border-radius: var(--radius);
+  color: var(--cream);
+  font-family: var(--font-body);
+  font-size: .9rem;
+  padding: .65rem 1rem .65rem 2.8rem;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+.search-box input::placeholder { color: rgba(255,248,240,.3); }
+.search-box input:focus {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px var(--red-glow);
+}
+.search-icon {
+  position: absolute; left: .85rem; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px;
+  opacity: .4;
+  pointer-events: none;
+}
+.filter-group { display: flex; align-items: center; gap: .5rem; }
+.filter-select {
+  background: rgba(255,248,240,.07);
+  border: 1.5px solid rgba(255,248,240,.15);
+  border-radius: var(--radius);
+  color: var(--cream);
+  font-family: var(--font-body);
+  font-size: .82rem;
+  padding: .6rem .9rem;
+  outline: none;
+  cursor: pointer;
+  transition: border-color .2s;
+}
+.filter-select:focus { border-color: var(--red); }
+.filter-select option { background: var(--ink-mid); color: var(--cream); }
+.result-count {
+  font-size: .78rem;
+  color: rgba(255,248,240,.4);
+  white-space: nowrap;
+}
+.result-count strong { color: var(--red); }
+
+/* ── MAIN LAYOUT ───────────────────────────────────────────── */
+.main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 2rem 4rem;
+  position: relative; z-index: 1;
+}
+
+/* ── TABLE WRAPPER ─────────────────────────────────────────── */
+.table-wrap {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  animation: fadeSlideUp .5s ease both;
+}
+.table-scroll {
+  overflow-x: auto;
+  /* Horizontal scrollbar styling */
+  scrollbar-width: thin;
+  scrollbar-color: var(--red) var(--chip-bg);
+}
+.table-scroll::-webkit-scrollbar { height: 6px; }
+.table-scroll::-webkit-scrollbar-track { background: var(--chip-bg); }
+.table-scroll::-webkit-scrollbar-thumb { background: var(--red); border-radius: 3px; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .85rem;
+  table-layout: fixed;
+}
+
+/* Column widths */
+col.c-title  { width: 300px; }
+col.c-id     { width: 120px; }
+col.c-start  { width: 105px; }
+col.c-end    { width: 105px; }
+col.c-portal { width: 120px; }
+col.c-ts     { width: 140px; }
+
+thead {
+  background: var(--ink);
+  position: sticky; top: 0;
+}
+thead th {
+  color: rgba(255,248,240,.6);
+  font-family: var(--font-mono);
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: .85rem 1rem;
+  text-align: left;
+  border-bottom: 2px solid var(--red);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition: color .15s;
+}
+thead th:hover { color: var(--cream); }
+thead th .sort-arrow { margin-left: 4px; opacity: .5; font-size: .7em; }
+thead th.active .sort-arrow { opacity: 1; color: var(--red); }
+
+tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background .15s, transform .1s;
+  animation: fadeRow .4s ease both;
+}
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover {
+  background: var(--chip-bg);
+}
+
+td {
+  padding: .85rem 1rem;
+  vertical-align: top;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Title cell */
+.td-title {
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.45;
+}
+.td-title a {
+  color: inherit;
+  text-decoration: none;
+  transition: color .15s;
+}
+.td-title a:hover { color: var(--red); }
+
+/* ID chip */
+.id-chip {
+  display: inline-block;
+  background: var(--chip-bg);
+  color: var(--ink-mid);
+  font-family: var(--font-mono);
+  font-size: .7rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  word-break: break-all;
+}
+
+/* Portal badge */
+.portal-badge {
+  display: inline-block;
+  background: var(--ink);
+  color: var(--cream);
+  font-size: .65rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+/* Date cells */
+.date-cell {
+  font-family: var(--font-mono);
+  font-size: .78rem;
+  color: var(--ink-soft);
+}
+.date-expired { color: var(--red); }
+.date-active  { color: var(--green); }
+.date-soon    { color: var(--amber); }
+
+/* Timestamp */
+.ts-cell {
+  font-family: var(--font-mono);
+  font-size: .72rem;
+  color: #B0906A;
+}
+
+/* ── EMPTY STATE ───────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: .3;
+}
+.empty-state h3 {
+  font-family: var(--font-head);
+  font-size: 1.6rem;
+  color: var(--ink-mid);
+  letter-spacing: .05em;
+}
+.empty-state p {
+  color: var(--ink-soft);
+  font-size: .85rem;
+  margin-top: .4rem;
+}
+
+/* ── PAGINATION ────────────────────────────────────────────── */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+  gap: .75rem;
+}
+.page-info {
+  font-size: .78rem;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+}
+.page-controls {
+  display: flex; align-items: center; gap: .4rem;
+}
+.page-btn {
+  width: 34px; height: 34px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: .82rem;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: all .15s;
+}
+.page-btn:hover:not(:disabled) {
+  border-color: var(--red);
+  color: var(--red);
+  background: var(--chip-bg);
+}
+.page-btn.active {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+  font-weight: 600;
+}
+.page-btn:disabled { opacity: .35; cursor: default; }
+.page-size-select {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: .78rem;
+  padding: .3rem .6rem;
+  outline: none;
+  cursor: pointer;
+}
+
+/* ── LOADING ───────────────────────────────────────────────── */
+.loading-wrap {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 1.2rem;
+  padding: 5rem 2rem;
+}
+.loader {
+  width: 40px; height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--red);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+.loading-wrap p {
+  font-size: .82rem;
+  color: var(--ink-soft);
+  letter-spacing: .05em;
+  font-family: var(--font-mono);
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── FOOTER ────────────────────────────────────────────────── */
+.footer {
+  background: var(--ink);
+  border-top: 2px solid rgba(255,248,240,.06);
+  padding: 2rem;
+  text-align: center;
+}
+.footer-brand {
+  font-family: var(--font-head);
+  font-size: 1.8rem;
+  color: var(--red);
+  letter-spacing: .08em;
+  text-shadow: 0 0 24px var(--red-glow);
+}
+.footer-sub {
+  font-size: .75rem;
+  color: rgba(255,248,240,.35);
+  margin-top: .4rem;
+  letter-spacing: .06em;
+}
+.footer-sub a {
+  color: var(--red);
+  text-decoration: none;
+  transition: opacity .15s;
+}
+.footer-sub a:hover { opacity: .75; }
+.footer-demo-notice {
+  display: inline-block;
+  margin-top: 1rem;
+  background: rgba(250,50,10,.12);
+  border: 1px solid rgba(250,50,10,.3);
+  border-radius: 6px;
+  padding: .5rem 1.2rem;
+  font-size: .72rem;
+  color: rgba(250,50,10,.8);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+/* ── ANIMATIONS ────────────────────────────────────────────── */
+@keyframes fadeSlideUp {
+  from { opacity:0; transform: translateY(20px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+@keyframes fadeRow {
+  from { opacity:0; transform: translateX(-8px); }
+  to   { opacity:1; transform: translateX(0); }
+}
+
+/* ── RESPONSIVE ────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .hero { padding: 2rem 1rem 1.5rem; }
+  .main { padding: 1.25rem 1rem 3rem; }
+  .search-bar-wrap { padding: .9rem 1rem; }
+  .topbar { padding: 0 1rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── TOPBAR ──────────────────────────────────────────────── -->
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-brand">TenderZ</div>
+    <span class="demo-badge">Demo</span>
+  </div>
+  <div class="topbar-right">Developed by <span>Yash Gupta</span></div>
+</header>
+
+<!-- ── HERO ────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-inner">
+    <p class="hero-eyebrow">Government Tender Scraper</p>
+    <h1 class="hero-title">Track Every <em>Tender.</em><br>Miss Nothing.</h1>
+    <p class="hero-sub">TenderZ automatically scrapes and indexes active government procurement tenders from official portals — so your team never misses an opportunity. This is a <strong style="color:var(--red)">demo version</strong>.</p>
+    <div class="hero-stats">
+      <div class="stat-card">
+        <div class="stat-num" id="stat-total">—</div>
+        <div class="stat-label">Total Tenders</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-active">—</div>
+        <div class="stat-label">Active Now</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-portals">—</div>
+        <div class="stat-label">Portals</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SEARCH BAR ──────────────────────────────────────────── -->
+<div class="search-bar-wrap">
+  <div class="search-inner">
+    <div class="search-box">
+      <svg class="search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="9" cy="9" r="6"/><path d="m15 15 3 3"/>
+      </svg>
+      <input type="text" id="searchInput" placeholder="Search by title, ID, portal…" autocomplete="off" />
+    </div>
+    <div class="filter-group">
+      <select class="filter-select" id="portalFilter"><option value="">All Portals</option></select>
+      <select class="filter-select" id="statusFilter">
+        <option value="">All Status</option>
+        <option value="active">Active</option>
+        <option value="expiring">Expiring Soon</option>
+        <option value="expired">Expired</option>
+      </select>
+    </div>
+    <span class="result-count" id="resultCount"></span>
+  </div>
+</div>
+
+<!-- ── MAIN ─────────────────────────────────────────────────── -->
+<main class="main">
+  <div id="contentArea">
+    <!-- Loading spinner -->
+    <div class="loading-wrap" id="loadingState">
+      <div class="loader"></div>
+      <p>Fetching live tenders…</p>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination" id="paginationWrap" style="display:none">
+    <div style="display:flex;align-items:center;gap:.75rem">
+      <span class="page-info" id="pageInfo"></span>
+      <select class="page-size-select" id="pageSizeSelect">
+        <option value="10">10 / page</option>
+        <option value="20" selected>20 / page</option>
+        <option value="50">50 / page</option>
+      </select>
+    </div>
+    <div class="page-controls" id="pageControls"></div>
+  </div>
+</main>
+
+<!-- ── FOOTER ────────────────────────────────────────────────── -->
+<footer class="footer">
+  <div class="footer-brand">TenderZ</div>
+  <div class="footer-sub">
+    Government Tender Scraper &nbsp;·&nbsp;
+    Developed by <a href="#">Yash Gupta</a>
+  </div>
+  <div class="footer-demo-notice">⚠ Demo Version — Data may be limited. Full version coming soon.</div>
+</footer>
+
+<script>
+// ── STATE ───────────────────────────────────────────────────
+let allTenders = [];
+let filteredTenders = [];
+let currentPage = 1;
+let pageSize = 20;
+let sortCol = null;
+let sortAsc = true;
+const today = new Date(); today.setHours(0,0,0,0);
+
+// ── INIT — uses google.script.run to call server-side getTenders()
+function init() {
+  document.getElementById('loadingState').style.display = 'flex';
+
+  google.script.run
+    .withSuccessHandler(function(tenders) {
+      allTenders = tenders || [];
+      buildPortalFilter();
+      applyFilters();
+      updateStats();
+      document.getElementById('loadingState').style.display = 'none';
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('loadingState').innerHTML =
+        `<div class="empty-state">
+           <div class="empty-icon">⚠️</div>
+           <h3>Failed to Load</h3>
+           <p>${err && err.message ? err.message : 'Could not fetch data from sheet. Check deployment permissions.'}</p>
+         </div>`;
+    })
+    .getTenders();
+}
+
+// ── PORTAL FILTER OPTIONS ────────────────────────────────────
+function buildPortalFilter() {
+  const sel = document.getElementById('portalFilter');
+  const portals = [...new Set(allTenders.map(t => t.portal).filter(Boolean))].sort();
+  portals.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = opt.textContent = p;
+    sel.appendChild(opt);
+  });
+}
+
+// ── STATS ────────────────────────────────────────────────────
+function updateStats() {
+  document.getElementById('stat-total').textContent = allTenders.length;
+  const active = allTenders.filter(t => getStatus(t.end_date) !== 'expired').length;
+  document.getElementById('stat-active').textContent = active;
+  const portals = new Set(allTenders.map(t => t.portal).filter(Boolean)).size;
+  document.getElementById('stat-portals').textContent = portals;
+}
+
+// ── DATE HELPERS ─────────────────────────────────────────────
+function parseDate(str) {
+  if (!str) return null;
+  const d = new Date(str);
+  return isNaN(d) ? null : d;
+}
+function getStatus(endStr) {
+  const d = parseDate(endStr);
+  if (!d) return 'unknown';
+  const diff = (d - today) / 86400000;
+  if (diff < 0)  return 'expired';
+  if (diff <= 7) return 'expiring';
+  return 'active';
+}
+function dateClass(status) {
+  return { expired:'date-expired', expiring:'date-soon', active:'date-active' }[status] || '';
+}
+
+// ── FILTERS ──────────────────────────────────────────────────
+function applyFilters() {
+  const q       = document.getElementById('searchInput').value.toLowerCase().trim();
+  const portal  = document.getElementById('portalFilter').value;
+  const status  = document.getElementById('statusFilter').value;
+
+  filteredTenders = allTenders.filter(t => {
+    if (q && !`${t.title} ${t.tender_id} ${t.portal}`.toLowerCase().includes(q)) return false;
+    if (portal && t.portal !== portal) return false;
+    if (status && getStatus(t.end_date) !== status) return false;
+    return true;
+  });
+
+  // sort
+  if (sortCol !== null) {
+    const cols = ['title','tender_id','start_date','end_date','portal','timestamp'];
+    const key  = cols[sortCol];
+    filteredTenders.sort((a,b) => {
+      const va = (a[key]||'').toString().toLowerCase();
+      const vb = (b[key]||'').toString().toLowerCase();
+      return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+    });
+  }
+
+  document.getElementById('resultCount').innerHTML =
+    `<strong>${filteredTenders.length}</strong> result${filteredTenders.length !== 1 ? 's' : ''}`;
+
+  currentPage = 1;
+  render();
+}
+
+// ── RENDER TABLE ─────────────────────────────────────────────
+function render() {
+  const area = document.getElementById('contentArea');
+  document.getElementById('loadingState') && (document.getElementById('loadingState').style.display='none');
+
+  const start = (currentPage-1)*pageSize;
+  const slice = filteredTenders.slice(start, start+pageSize);
+  const totalPages = Math.max(1, Math.ceil(filteredTenders.length / pageSize));
+
+  if (!filteredTenders.length) {
+    area.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <h3>No Tenders Found</h3>
+        <p>Try adjusting your search or filters.</p>
+      </div>`;
+    document.getElementById('paginationWrap').style.display='none';
+    return;
+  }
+
+  const cols = [
+    {label:'Title',     key:'title'},
+    {label:'Tender ID', key:'tender_id'},
+    {label:'Start',     key:'start_date'},
+    {label:'Ends',      key:'end_date'},
+    {label:'Portal',    key:'portal'},
+    {label:'Updated',   key:'timestamp'},
+  ];
+  const thHTML = cols.map((c,i) => {
+    const active = sortCol===i ? 'active' : '';
+    const arrow  = sortCol===i ? (sortAsc?'↑':'↓') : '↕';
+    return `<th class="${active}" onclick="handleSort(${i})">${c.label} <span class="sort-arrow">${arrow}</span></th>`;
+  }).join('');
+
+  let rowsHTML = '';
+  slice.forEach((t, idx) => {
+    const status   = getStatus(t.end_date);
+    const endClass = dateClass(status);
+    const delay    = idx * 0.035;
+    const titleEl  = t.link && t.link !== '#'
+      ? `<a href="${t.link}" target="_blank" rel="noopener">${esc(t.title)}</a>`
+      : esc(t.title);
+    rowsHTML += `
+      <tr style="animation-delay:${delay}s">
+        <td class="td-title">${titleEl}</td>
+        <td><span class="id-chip">${esc(t.tender_id||'—')}</span></td>
+        <td class="date-cell">${esc(t.start_date||'—')}</td>
+        <td class="date-cell ${endClass}">${esc(t.end_date||'—')}</td>
+        <td>${t.portal?`<span class="portal-badge">${esc(t.portal)}</span>`:'—'}</td>
+        <td class="ts-cell">${esc(t.timestamp||'—')}</td>
+      </tr>`;
+  });
+
+  area.innerHTML = `
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table>
+          <colgroup>
+            <col class="c-title"/><col class="c-id"/>
+            <col class="c-start"/><col class="c-end"/>
+            <col class="c-portal"/><col class="c-ts"/>
+          </colgroup>
+          <thead><tr>${thHTML}</tr></thead>
+          <tbody>${rowsHTML}</tbody>
+        </table>
+      </div>
+    </div>`;
+
+  // Pagination
+  const pg  = document.getElementById('paginationWrap');
+  const pi  = document.getElementById('pageInfo');
+  const pc  = document.getElementById('pageControls');
+  pg.style.display = 'flex';
+  pi.textContent   = `Page ${currentPage} of ${totalPages}  ·  ${start+1}–${Math.min(start+pageSize, filteredTenders.length)} of ${filteredTenders.length}`;
+  pc.innerHTML     = buildPageButtons(currentPage, totalPages);
+}
+
+function buildPageButtons(cur, total) {
+  let html = `<button class="page-btn" onclick="goPage(${cur-1})" ${cur===1?'disabled':''}>‹</button>`;
+  const pages = paginate(cur, total);
+  pages.forEach(p => {
+    if (p==='…') {
+      html += `<span class="page-btn" style="cursor:default;opacity:.5">…</span>`;
+    } else {
+      html += `<button class="page-btn${p===cur?' active':''}" onclick="goPage(${p})">${p}</button>`;
+    }
+  });
+  html += `<button class="page-btn" onclick="goPage(${cur+1})" ${cur===total?'disabled':''}>›</button>`;
+  return html;
+}
+
+function paginate(cur, total) {
+  if (total<=7) return Array.from({length:total},(_,i)=>i+1);
+  const arr=[];
+  const L=Math.max(1,cur-2), R=Math.min(total,cur+2);
+  if(L>1){ arr.push(1); if(L>2) arr.push('…'); }
+  for(let i=L;i<=R;i++) arr.push(i);
+  if(R<total){ if(R<total-1) arr.push('…'); arr.push(total); }
+  return arr;
+}
+
+function goPage(p) {
+  const total = Math.ceil(filteredTenders.length/pageSize);
+  if(p<1||p>total) return;
+  currentPage = p;
+  render();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function handleSort(colIdx) {
+  if(sortCol===colIdx) sortAsc=!sortAsc;
+  else { sortCol=colIdx; sortAsc=true; }
+  applyFilters();
+}
+
+function esc(s) {
+  return String(s||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── EVENT LISTENERS ─────────────────────────────────────────
+document.getElementById('searchInput').addEventListener('input', () => applyFilters());
+document.getElementById('portalFilter').addEventListener('change', () => applyFilters());
+document.getElementById('statusFilter').addEventListener('change', () => applyFilters());
+document.getElementById('pageSizeSelect').addEventListener('change', e => {
+  pageSize = parseInt(e.target.value);
+  currentPage = 1;
+  render();
+});
+
+// ── BOOT ────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

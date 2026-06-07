@@ -1,0 +1,122 @@
+================================================================================
+SYSTEM ARCHITECTURE & WORKFLOW MANUAL
+================================================================================
+Project Name: Procurement & Tender Intelligence System
+Author: System Architect
+Date: June 2026
+Documentation Target: GitHub Repository (README / WORKFLOW.md / architecture.txt)
+================================================================================
+
+1. PROJECT OVERVIEW
+--------------------------------------------------------------------------------
+The Procurement & Tender Intelligence System is an automated, lightweight, and 
+highly cost-effective data pipeline designed to discover, aggregate, filter, and 
+present public sector procurement opportunities. 
+
+The architecture is built completely on cloud-native automation, serverless 
+execution triggers, and accessible spreadsheet-based middleware acting as a data 
+warehouse. It eliminates the need for expensive dedicated database hosting while 
+providing a real-time, custom-branded front-end interface for end users.
+
+
+2. ARCHITECTURAL COMPONENTS
+--------------------------------------------------------------------------------
+The system is divided into four cleanly decoupled layers:
+
+A. Data Acquisition Layer (The Target Portals)
+   - State eProcurement Portals: Various regional government portals containing 
+     local/state tender notices, PDF documents, and structural procurement milestones.
+   - GeM Portal (Government e-Marketplace): The central national marketplace containing 
+     forward/reverse auctions, direct purchases, and large-scale public bidding details.
+
+B. Automation & Integration Layer (The Processing Engine)
+   - GitHub Actions / Cron Jobs: Orchestrates execution timing. Uses a scheduled 
+     cron syntax (e.g., `0 */6 * * *` for every 6 hours) to run the runner entirely 
+     serverless.
+   - Python Web Scraper: The core execution script. It initializes headless request/
+     parsing engines, handles network retries, standardizes incoming data structures 
+     (columns, date formats, currencies), and manages error logging.
+
+C. Storage & Data Management Layer (The Middleware Warehouse)
+   - Google Sheets API: The secure bridge allowing the Python script to authenticate 
+     (via Service Account or OAuth2 tokens) and execute batch write/update mutations.
+   - Google Sheets Instance: Acts as the main relational database consisting of:
+     * Sheet 1: [Active Tenders] - Live opportunities available for bidding.
+     * Sheet 2: [Closed Tenders] - Archived history used for analytics.
+   - Google Apps Script: An internal, event-driven macro script embedded directly 
+     within the spreadsheet. It evaluates metadata statuses natively on the cloud.
+
+D. User Interface Layer (The Front-End Dashboard)
+   - Custom Web Application: Written in vanilla/modern HTML5, CSS3, and JavaScript.
+   - Google Sheets JavaScript SDK / Public CSV Fetch: A read-only integration path 
+     that pulls real-time information securely into the browser without exposing 
+     write permissions or database credentials.
+
+
+3. THE END-TO-END STEP-BY-STEP WORKFLOW
+--------------------------------------------------------------------------------
+[STEP 01: SCHEDULED TRIGGER]
+-> The GitHub Actions runner wakes up automatically based on a predefined 
+   cron sequence. It spins up an ephemeral virtual machine (Ubuntu environment), 
+   restores cached python modules, and safely injects system secrets (API Keys, 
+   Google credentials) into the environment variables.
+
+[STEP 02: INGESTION & DATA PARSING]
+-> The Python script launches. It maps through a configured dictionary of target 
+   endpoints representing state eProcurement and GeM portals.
+-> It sends targeted HTTP requests or utilizes headless scraping mechanics to parse 
+   raw table structures and JSON feeds. It pulls data parameters such as: 
+   Tender ID, Organization, Scope of Work, Estimated Value, Closing Date, and URL.
+
+[STEP 03: NORMALIZATION & FILTERING]
+-> The script processes the raw strings. Dates are converted into a standardized 
+   ISO format (YYYY-MM-DD), numeric amounts are stripped of regional currency characters, 
+   and duplicate entries already fetched are dropped to save processing bandwidth.
+
+[STEP 04: GOOGLE SHEETS INJECTION]
+-> Using the `google-api-python-client` and service account JSON keys, the script 
+   authenticates with Google Workspace.
+-> It checks the [Active Tenders] sheet and cross-references existing IDs. New 
+   tenders are dynamically appended to the bottom of the sheet using the `.append()` 
+   or `.update()` API payloads.
+
+[STEP 05: INTERNAL DATABASE HOUSEKEEPING]
+-> A Google Apps Script is triggered internally (either on time-driven daily timers 
+   or on-change triggers).
+-> The script iterates through the [Active Tenders] rows and checks the "Closing Date" 
+   against the current system timestamp (`new Date()`).
+-> If a tender's deadline has passed, the script automatically copies that entire row, 
+   appends it to the [Closed Tenders] sheet, and deletes the row from [Active Tenders]. 
+   This maintains data compression and keeps the Active sheet highly performant.
+
+[STEP 06: DASHBOARD RENDERING]
+-> When an end user visits the web portal, the custom JavaScript front-end executes 
+   an asynchronous fetch request targeting the structured endpoint/JSON-feed of the 
+   [Active Tenders] sheet.
+-> The UI processes the payload directly in the browser, applying Client-Side 
+   Filtering, Searching, and Sorting features allowing users to explore opportunities.
+
+
+4. KEY DESIGN ADVANTAGES
+--------------------------------------------------------------------------------
+- Zero-Dollar Cloud Footprint: Utilizes GitHub free-tier actions and Google Drive 
+  storage limits, eliminating recurring cloud database and compute server expenses.
+- Low Maintenance: No database connection pooling, patching, or infrastructure 
+  scaling problems. Google infrastructure handles the concurrent reading spikes.
+- Visual Control Room: Because data sits inside a spreadsheet, non-technical 
+  administrators can manually fix typos, flag rows, or override values instantly 
+  without needing a custom admin panel database CRUD GUI.
+
+
+5. DISASTER RECOVERY & ENVIRONMENT VARIABLES
+--------------------------------------------------------------------------------
+To run or fork this project on GitHub, ensure the following repository secrets 
+are configured:
+
+- `GSHEETS_SERVICE_ACCOUNT_JSON`: The complete credentials JSON from the Google Cloud Console.
+- `TARGET_SPREADSHEET_ID`: The unique alphabetic identifier found inside your sheet's URL.
+- `SCRAPER_USER_AGENT`: A custom headers string to prevent blocking from portal firewall rules.
+
+================================================================================
+EOF - SYSTEM WORKFLOW DOCUMENTATION
+================================================================================
